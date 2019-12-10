@@ -1,0 +1,29 @@
+stages:
+    - build
+    - publish
+    
+build:
+    stage: build
+    image: icyboy/k8s_build:v1.17.0
+    tags:
+        - aws
+        - docker
+    only:
+        - web  
+    script:
+        - KUBE_GIT_TREE_STATE="clean" KUBE_GIT_VERSION=v1.17.0 KUBE_BUILD_PLATFORMS=linux/amd64 make all WHAT=cmd/kubeadm GOFLAGS=-v
+    artifacts:
+        expire_in: '1 hour'
+        paths:
+            - _output/bin/kubeadm
+
+publish:
+    image: inetprocess/gitlab-release
+    stage: publish
+    tags:
+        - aws
+        - docker
+    only:
+        - web
+    script:
+        - gitlab-release --message 'Super kubeadm' _output/bin/kubeadm
