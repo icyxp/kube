@@ -29,7 +29,7 @@ func getLVScarePod() v1.Pod {
         ImagePullPolicy: v1.PullIfNotPresent,
         Command:         LVScare.Command,
         SecurityContext: &v1.SecurityContext{Privileged: &t},
-    }, v)
+    }, v, nil)
     pod.Spec.HostNetwork = true
     return pod
 }
