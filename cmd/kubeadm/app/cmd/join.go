@@ -198,6 +198,7 @@ func NewCmdJoin(out io.Writer, joinOptions *joinOptions) *cobra.Command {
 				}
 
 			} else {
+				locallb.LVScareStaticPodToDisk("/etc/kubernetes/manifests")
 				// otherwise, if the node joined as a worker node;
 				// outputs the join done message and exit
 				fmt.Fprint(data.outputWriter, joinWorkerNodeDoneMsg)
