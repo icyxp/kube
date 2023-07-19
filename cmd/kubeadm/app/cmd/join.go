@@ -46,6 +46,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
+	locallb "k8s.io/kubernetes/cmd/kubeadm/app/localLB"
 )
 
 var (
@@ -151,7 +152,8 @@ type joinData struct {
 
 // newCmdJoin returns "kubeadm join" command.
 // NB. joinOptions is exposed as parameter for allowing unit testing of
-//     the newJoinData method, that implements all the command options validation logic
+//
+//	the newJoinData method, that implements all the command options validation logic
 func newCmdJoin(out io.Writer, joinOptions *joinOptions) *cobra.Command {
 	if joinOptions == nil {
 		joinOptions = newJoinOptions()
@@ -170,6 +172,14 @@ func newCmdJoin(out io.Writer, joinOptions *joinOptions) *cobra.Command {
 			}
 
 			data := c.(*joinData)
+			if data.cfg.ControlPlane == nil {
+				fmt.Println("This is not a control plan")
+				if len(locallb.LVScare.Masters) != 0 {
+					locallb.CreateLocalLB()
+				}
+			} else {
+				fmt.Println("This is a control plan")
+			}
 
 			if err := joinRunner.Run(args); err != nil {
 				return err
@@ -192,6 +202,7 @@ func newCmdJoin(out io.Writer, joinOptions *joinOptions) *cobra.Command {
 				}
 
 			} else {
+				locallb.LVScareStaticPodToDisk("/etc/kubernetes/manifests")
 				// otherwise, if the node joined as a worker node;
 				// outputs the join done message and exit
 				fmt.Fprint(data.outputWriter, joinWorkerNodeDoneMsg)
@@ -264,6 +275,15 @@ func addJoinConfigFlags(flagSet *flag.FlagSet, cfg *kubeadmapiv1.JoinConfigurati
 	flagSet.BoolVar(
 		&cfg.Discovery.BootstrapToken.UnsafeSkipCAVerification, options.TokenDiscoverySkipCAHash, false,
 		"For token-based discovery, allow joining without --discovery-token-ca-cert-hash pinning.",
+	)
+	flagSet.StringSliceVar(
+		&locallb.LVScare.Masters, "master", []string{}, "A list of ha masters, --master 192.168.1.2:6443  --master 192.168.1.3:6443  --master 192.168.1.4:6443",
+	)
+	flagSet.StringVar(
+		&locallb.LVScare.VIP, "vip", "169.254.169.100", "virtual ip",
+	)
+	flagSet.StringVar(
+		&locallb.LVScare.Image, "lvscare-image", "icyboy/lvscare:latest", "define lvscare image",
 	)
 	//	discovery via kube config file flag
 	flagSet.StringVar(
